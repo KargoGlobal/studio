@@ -1,5 +1,6 @@
 "use client";
 
+import { FlagQuickJump } from "@/components/flag-quick-jump";
 import { Header } from "@/components/refine-ui/layout/header";
 import { ThemeProvider } from "@/components/refine-ui/theme/theme-provider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -34,6 +35,7 @@ export function Layout({ children }: PropsWithChildren) {
             {children}
           </main>
         </SidebarInset>
+        <FlagQuickJump />
       </SidebarProvider>
     </ThemeProvider>
   );

@@ -27,6 +27,11 @@
     "copied": "Copied to clipboard",
     "copyError": "Couldn't copy to clipboard"
   },
+  "quickJump": {
+    "title": "Jump to a flag",
+    "placeholder": "Jump to a flag…",
+    "empty": "No flags found"
+  },
   "nav": {
     "company": "Company",
     "details": "Details",
