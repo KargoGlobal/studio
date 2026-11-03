@@ -29,7 +29,7 @@ import { accessControlProvider } from "./providers/access-control";
 import { i18nProvider } from "./providers/i18n";
 import { authProvider } from "./providers/auth";
 import { dataProvider } from "./providers/data";
-import { HomeRoute } from "./pages/home/home-route";
+import { HomePage } from "./pages/home";
 import { LoginPage } from "./pages/login";
 import { OnboardingChoicePage } from "./pages/onboarding/choice";
 import { OnboardingCreateCompanyPage } from "./pages/onboarding/create-company";
@@ -205,7 +205,7 @@ function App() {
                     </Authenticated>
                   }
                 >
-                  <Route index element={<HomeRoute />} />
+                  <Route index element={<HomePage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route
                     path="/flags"
@@ -281,14 +281,24 @@ function App() {
                           </RbacRoute>
                         }
                       />
-                      <Route
-                        path=":teamId"
-                        element={
-                          <RbacRoute resource="team-detail" action="show">
-                            <TeamDetailPage />
-                          </RbacRoute>
-                        }
-                      />
+                      <Route path=":teamId">
+                        <Route
+                          index
+                          element={
+                            <RbacRoute resource="team-detail" action="show">
+                              <TeamDetailPage section="details" />
+                            </RbacRoute>
+                          }
+                        />
+                        <Route
+                          path="members"
+                          element={
+                            <RbacRoute resource="team-detail" action="show">
+                              <TeamDetailPage section="members" />
+                            </RbacRoute>
+                          }
+                        />
+                      </Route>
                     </Route>
                   </Route>
                   <Route path="/companies">
