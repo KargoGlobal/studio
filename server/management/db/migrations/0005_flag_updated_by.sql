@@ -3,7 +3,6 @@
 -- updated_by is whoever last changed what the relay proxy serves (a save, a rollback or an on/off switch).
 ALTER TABLE flags ADD COLUMN updated_by UUID REFERENCES users(id) ON DELETE SET NULL;
 CREATE INDEX idx_flags_updated_by ON flags(updated_by);
-UPDATE flags f SET updated_by = fv.created_by FROM flag_versions fv WHERE fv.id = f.current_version_id;
 
 -- The editor's name reaches GO Feature Flag as metadata.updatedBy, so its notifiers can say who made a change.
 CREATE OR REPLACE VIEW goff_flags AS
