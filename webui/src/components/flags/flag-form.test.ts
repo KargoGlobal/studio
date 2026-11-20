@@ -498,6 +498,13 @@ describe("progressive rollout keeps distinct initial/end variations", () => {
     expect(new Date(local).getTime()).toBe(new Date(iso).getTime());
   });
 
+  it("isoToLocalInput keeps milliseconds so stored dates round-trip", () => {
+    const iso = "2026-03-01T09:00:00.500Z";
+    const local = isoToLocalInput(iso);
+    expect(local).toMatch(/:00\.500$/);
+    expect(new Date(local).toISOString()).toBe(iso);
+  });
+
   it("localMidnight formats the given date at 00:00 local time", () => {
     const local = localMidnight(new Date(2024, 2, 5, 13, 47)); // 5 Mar 2024, 13:47 local
     // Time is pinned to midnight regardless of the input's wall-clock time,
