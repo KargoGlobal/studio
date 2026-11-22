@@ -31,11 +31,12 @@ export function nextRuleName(names: string[]): string {
 }
 
 // isoToLocalInput converts a stored UTC ISO timestamp into the local wall-clock
-// string a <input type="datetime-local"> expects (YYYY-MM-DDTHH:mm).
+// string a <input type="datetime-local"> expects (YYYY-MM-DDTHH:mm[:ss[.sss]]).
 const pad2 = (n: number) => String(n).padStart(2, "0");
 export function isoToLocalInput(iso: string): string {
   const d = new Date(iso);
-  const sec = d.getSeconds() ? `:${pad2(d.getSeconds())}` : "";
+  const ms = d.getMilliseconds() ? `.${String(d.getMilliseconds()).padStart(3, "0")}` : "";
+  const sec = d.getSeconds() || ms ? `:${pad2(d.getSeconds())}${ms}` : "";
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}${sec}`;
 }
 

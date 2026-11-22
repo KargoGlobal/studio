@@ -53,7 +53,7 @@ describe("hydrate/build round-trip", () => {
 
   const ruleDisableTests: { name: string; disable?: boolean; want: Record<string, unknown> }[] = [
     { name: "keeps a rule turned off", disable: true, want: { disable: true } },
-    { name: "keeps a rule turned on explicitly", disable: false, want: { disable: false } },
+    { name: "drops disable: false, the default", disable: false, want: {} },
     { name: "adds nothing to a rule without disable", want: {} },
   ];
   for (const tt of ruleDisableTests) {
@@ -511,6 +511,13 @@ describe("progressive rollout keeps distinct initial/end variations", () => {
     const local = isoToLocalInput(iso);
     expect(local).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:30$/);
     expect(new Date(local).getTime()).toBe(new Date(iso).getTime());
+  });
+
+  it("isoToLocalInput keeps milliseconds so stored dates round-trip", () => {
+    const iso = "2026-03-01T09:00:00.500Z";
+    const local = isoToLocalInput(iso);
+    expect(local).toMatch(/:00\.500$/);
+    expect(new Date(local).toISOString()).toBe(iso);
   });
 
   it("localMidnight formats the given date at 00:00 local time", () => {

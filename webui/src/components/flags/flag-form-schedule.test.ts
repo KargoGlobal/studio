@@ -312,6 +312,29 @@ describe("reconcileSchedule", () => {
     expect(got.defaultOutcome?.single).toBe("yes");
     expect(got.rules).toEqual([{ ruleId: fr.id, outcome: newOutcome("yes") }]);
   });
+
+  it("follows variation renames and removals in kept changes", () => {
+    const form = hydrateForm(base);
+    const [, fr] = form.rules;
+    const step: ScheduleStep = {
+      ...newScheduleStep("2026-03-01T10:00"),
+      kept: {
+        fields: {},
+        defaultRule: { percentage: { on: 60, off: 40 } },
+        targeting: [
+          { ruleId: fr.id, rule: { name: fr.name, variation: "off" } },
+          { rule: { name: "gone", progressiveRollout: { initial: { variation: "on" }, end: { variation: "off" } } } },
+        ],
+      },
+    };
+    const [got] = reconcileSchedule([step], [fr], new Map([["on", "yes"]]), new Set(["off"]), ["yes"]);
+    expect(got.kept?.defaultRule?.percentage).toEqual({ yes: 60 });
+    expect(got.kept?.targeting[0].rule.variation).toBeUndefined();
+    expect(got.kept?.targeting[1].rule.progressiveRollout).toEqual({
+      initial: { variation: "yes" },
+      end: { variation: undefined },
+    });
+  });
 });
 
 describe("stepStatuses", () => {
