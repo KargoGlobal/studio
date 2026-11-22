@@ -15,7 +15,6 @@ import {
   newProg,
   nextId,
 } from "./flag-form-helpers";
-import { buildSchedule, hydrateSchedule } from "./flag-form-schedule";
 import type {
   FlagFormState,
   Outcome,
@@ -87,7 +86,7 @@ export function hydrateRules(payload: FlagPayload): Rule[] {
     name: r.name ?? "",
     query: parseQuery(r.query),
     outcome: outcomeFromRule(r),
-    disable: r.disable,
+    disable: r.disable || undefined,
   }));
 }
 
@@ -132,14 +131,11 @@ export function buildFlagPayload(form: FlagFormState): Record<string, unknown> {
       name: r.name,
       query: JSON.stringify(formatQuery(r.query, "jsonlogic")),
       ...buildOutcome(r.outcome, names),
-      ...(r.disable !== undefined && { disable: r.disable }),
+      ...(r.disable && { disable: true }),
     }));
   }
   payload.defaultRule = buildOutcome(form.defaultOutcome, names);
   payload.trackEvents = form.trackEvents;
-  if (form.schedule.length > 0) {
-    payload.scheduledRollout = buildSchedule(form);
-  }
   return payload;
 }
 
@@ -161,15 +157,11 @@ export function hydrateForm(payload?: FlagPayload): FlagFormState {
     if (RESERVED_META_KEYS.has(k)) reserved[k] = v;
     else custom[k] = v;
   }
-  const variations = hydrateVariations(p);
-  const rules = hydrateRules(p);
-  const defaultOutcome = outcomeFromRule(p.defaultRule);
   return {
     type: ty === "unknown" ? "string" : ty,
-    variations,
-    rules,
-    defaultOutcome,
-    schedule: hydrateSchedule(p.scheduledRollout, { variations, rules, defaultOutcome }),
+    variations: hydrateVariations(p),
+    rules: hydrateRules(p),
+    defaultOutcome: outcomeFromRule(p.defaultRule),
     // Default to true when omitted — matches GO Feature Flag's evaluation default.
     trackEvents: p.trackEvents ?? true,
     metadata: reserved,
