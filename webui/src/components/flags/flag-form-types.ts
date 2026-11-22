@@ -30,6 +30,7 @@ export type Rule = {
   name: string;
   query: RuleGroupType;
   outcome: Outcome;
+  disable?: boolean;
 };
 
 // A scheduled step changes the flag at a date. Rule changes point at a rule by
