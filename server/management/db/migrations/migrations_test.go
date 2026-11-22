@@ -89,3 +89,45 @@ func TestDownThenUpAgain(t *testing.T) {
 	assert.Equal(t, schema, tables())
 	assert.Equal(t, cols, columns(), "same columns after a round-trip")
 }
+
+// Upgrading to the updatedBy migration must not change the config GO Feature Flag reads for an existing flag.
+func TestUpdatedByUpgradeKeepsGoffConfig(t *testing.T) {
+	db, err := repository.NewDB(t.Context(), config.DBConfig{URL: testutil.EmptyDatabase(t), MaxConns: 4})
+	require.NoError(t, err)
+	defer db.Close()
+	ctx := t.Context()
+	sqlDB := stdlib.OpenDBFromPool(db.Pool)
+	defer func() { _ = sqlDB.Close() }()
+	p, err := migrations.NewProvider(sqlDB)
+	require.NoError(t, err)
+	_, err = p.UpTo(ctx, 4)
+	require.NoError(t, err)
+
+	var flagID string
+	require.NoError(t, db.Pool.QueryRow(ctx, `
+		WITH u AS (INSERT INTO users (email, name) VALUES ('jane@example.com', 'Jane Doe') RETURNING id),
+		     c AS (INSERT INTO companies (display_name) VALUES ('Acme') RETURNING id),
+		     t AS (INSERT INTO teams (name, company_id) SELECT 'Platform', id FROM c RETURNING id),
+		     fs AS (INSERT INTO flagsets (team_id, name) SELECT id, 'prod' FROM t RETURNING id)
+		INSERT INTO flags (flagset_id, name) SELECT id, 'my-flag' FROM fs RETURNING id`).Scan(&flagID))
+	_, err = db.Pool.Exec(ctx, `
+		WITH v AS (INSERT INTO flag_versions (flag_id, version_number, payload, created_by)
+		           SELECT $1, 1, '{"variations":{"on":true},"defaultRule":{"variation":"on"},"metadata":{"team":"core"}}', id
+		           FROM users RETURNING id)
+		UPDATE flags SET current_version_id = (SELECT id FROM v) WHERE id = $1`, flagID)
+	require.NoError(t, err)
+
+	snapshot := func() string {
+		var config string
+		require.NoError(t, db.Pool.QueryRow(ctx, `SELECT config::text FROM goff_flags WHERE flag_name = 'my-flag'`).Scan(&config))
+		return config
+	}
+	before := snapshot()
+
+	_, err = migrations.Up(ctx, db.Pool)
+	require.NoError(t, err)
+	var updatedBy *string
+	require.NoError(t, db.Pool.QueryRow(ctx, `SELECT updated_by_name FROM flags WHERE id = $1`, flagID).Scan(&updatedBy))
+	assert.Nil(t, updatedBy, "existing flags are not backfilled")
+	assert.Equal(t, before, snapshot(), "goff_flags config is byte-identical after the upgrade")
+}

@@ -118,4 +118,10 @@ func TestGoffFlagsViewUpdatedBy(t *testing.T) {
 	assert.Equal(t, map[string]any{"updatedBy": "Bob"}, meta(rows[1]), "an on/off switch credits who flipped it")
 	assert.Nil(t, meta(rows[2]), "a user without a name adds nothing")
 	assert.Nil(t, meta(rows[3]), "a version without an author adds nothing")
+
+	_, err := db.Pool.Exec(ctx, `UPDATE users SET name = 'Jane Renamed' WHERE id = $1`, jane.ID)
+	require.NoError(t, err)
+	_, err = db.Pool.Exec(ctx, `DELETE FROM users WHERE id = $1`, bob.ID)
+	require.NoError(t, err)
+	assert.Equal(t, rows, queryGoff(t, db, fs.ID), "renaming or deleting a user changes no flag")
 }
