@@ -24,7 +24,7 @@ import type {
   Rule,
   ScheduleStep,
 } from "./flag-form-types";
-import type { FlagRule, FlagScheduledStep } from "@/types/api";
+import type { FlagProgressiveRolloutStep, FlagRule, FlagScheduledStep } from "@/types/api";
 
 export const SCHEDULE_OUTCOME_MODES: OutcomeMode[] = ["single", "percentage"];
 
@@ -206,13 +206,39 @@ export function reconcileSchedule(
 ): ScheduleStep[] {
   const ids = new Set(rules.map((r) => r.id));
   const fix = (o: Outcome) => reconcileOutcome(o, renames, removed, nextNames);
+  const names = new Set(nextNames);
+  const ref = (n?: string) => {
+    if (n === undefined || removed.has(n)) return undefined;
+    const m = renames.get(n) ?? n;
+    return names.has(m) ? m : undefined;
+  };
+  const fixStep = (p?: FlagProgressiveRolloutStep) => p && { ...p, variation: ref(p.variation) };
+  const fixKept = (r: FlagRule): FlagRule => ({
+    ...r,
+    variation: ref(r.variation),
+    percentage:
+      r.percentage &&
+      Object.fromEntries(
+        Object.entries(r.percentage).flatMap(([k, v]) => {
+          const m = ref(k);
+          return m === undefined ? [] : [[m, v]];
+        }),
+      ),
+    progressiveRollout: r.progressiveRollout && {
+      initial: fixStep(r.progressiveRollout.initial),
+      end: fixStep(r.progressiveRollout.end),
+    },
+  });
   return steps.map((s) => ({
     ...s,
     defaultOutcome: s.defaultOutcome && fix(s.defaultOutcome),
     rules: s.rules.filter((c) => ids.has(c.ruleId)).map((c) => ({ ...c, outcome: fix(c.outcome) })),
     kept: s.kept && {
       ...s.kept,
-      targeting: s.kept.targeting.filter((k) => k.ruleId === undefined || ids.has(k.ruleId)),
+      defaultRule: s.kept.defaultRule && fixKept(s.kept.defaultRule),
+      targeting: s.kept.targeting
+        .filter((k) => k.ruleId === undefined || ids.has(k.ruleId))
+        .map((k) => ({ ...k, rule: fixKept(k.rule) })),
     },
   }));
 }
