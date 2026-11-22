@@ -15,6 +15,7 @@ import {
   newProg,
   nextId,
 } from "./flag-form-helpers";
+import { buildSchedule, hydrateSchedule } from "./flag-form-schedule";
 import type {
   FlagFormState,
   Outcome,
@@ -136,6 +137,9 @@ export function buildFlagPayload(form: FlagFormState): Record<string, unknown> {
   }
   payload.defaultRule = buildOutcome(form.defaultOutcome, names);
   payload.trackEvents = form.trackEvents;
+  if (form.schedule.length > 0) {
+    payload.scheduledRollout = buildSchedule(form);
+  }
   return payload;
 }
 
@@ -157,11 +161,15 @@ export function hydrateForm(payload?: FlagPayload): FlagFormState {
     if (RESERVED_META_KEYS.has(k)) reserved[k] = v;
     else custom[k] = v;
   }
+  const variations = hydrateVariations(p);
+  const rules = hydrateRules(p);
+  const defaultOutcome = outcomeFromRule(p.defaultRule);
   return {
     type: ty === "unknown" ? "string" : ty,
-    variations: hydrateVariations(p),
-    rules: hydrateRules(p),
-    defaultOutcome: outcomeFromRule(p.defaultRule),
+    variations,
+    rules,
+    defaultOutcome,
+    schedule: hydrateSchedule(p.scheduledRollout, { variations, rules, defaultOutcome }),
     // Default to true when omitted — matches GO Feature Flag's evaluation default.
     trackEvents: p.trackEvents ?? true,
     metadata: reserved,
